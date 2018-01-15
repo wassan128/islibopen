@@ -15,8 +15,13 @@ def get_todaydate():
     return {"year": y, "month": m, "date": d} 
 
 class IsLibOpen():
-    def __init__(self, month):
-        self.month = month
+    def __init__(self, month=None):
+        if month:
+            self.month = month
+        else:
+            dd = get_todaydate()
+            self.month = "{}-{}".format(dd["year"], dd["month"])
+        print(self.month)
         self.table = []
         self._get_table()
 
@@ -33,7 +38,12 @@ class IsLibOpen():
             if td is not None:
                 self.table.append(td.group(1))
 
-    def isopen(self, date):
+    def isopen(self, date=None):
+        if date is None:
+            dd = get_todaydate()
+            date = dd["date"]
+
+        print(date)
         t = self.table[date - 1]
         status = "通常開館"
         if t == "BBFFFF":
@@ -44,15 +54,11 @@ class IsLibOpen():
             status = "休館"
         return status
 
-    def today(self):
-        date = get_todaydate()["date"]
-        return self.isopen(date)
-
 
 if __name__ == "__main__":
-    ilo = IsLibOpen("2018-01")
-    print("today: {}".format(ilo.today()))
-    
+    ilo = IsLibOpen()
+    print("today: {}".format(ilo.isopen()))
+
     import code
     code.interact(local=locals())
 
