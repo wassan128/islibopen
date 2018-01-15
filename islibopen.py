@@ -3,8 +3,8 @@ import re
 import requests
 
 
-#BASE_URL = "http://libopac3-c.nagaokaut.ac.jp/opac/calendar/?kscode=055&countercd=&date="
-BASE_URL = "http://localhost:8000/test.html?date="
+BASE_URL = "http://libopac3-c.nagaokaut.ac.jp/opac/calendar/?kscode=055&countercd=&date="
+#BASE_URL = "http://localhost:8000/test.html?date="
 
 
 def get_todaydate():
@@ -14,24 +14,28 @@ def get_todaydate():
     d = now.day
     return {"year": y, "month": m, "date": d} 
 
+
 class IsLibOpen():
-    def __init__(self, month=None):
-        if month:
-            self.month = month
-        else:
-            dd = get_todaydate()
-            self.month = "{}-{}".format(dd["year"], dd["month"])
-        print(self.month)
+    def __init__(self, year=None, month=None):
+        dd = get_todaydate()
+        self.thismonth = "{0:04d}-{1:02d}".format(dd["year"], dd["month"])
+        self.month = None
+        if year and month:
+            self.month = "{0:04d}-{1:02d}".format(year, month)
         self.table = []
+
         self._get_table()
 
-    def _get_html(self, month):
+    def _get_html(self):
+        month = self.month
+        if month == None:
+            month = self.thismonth
         html = requests.get("{}{}".format(BASE_URL, month))
         res = html.text.split("\n")
         return res
 
     def _get_table(self):
-        res = self._get_html("{}".format(self.month))
+        res = self._get_html()
         p_td = re.compile(r"\s*<td.*color:#([BCF]{6});.*td>")
         for row in res:
             td = p_td.search(row)
@@ -41,21 +45,32 @@ class IsLibOpen():
     def isopen(self, date=None):
         if date is None:
             dd = get_todaydate()
-            date = dd["date"]
+            if self.month is None or self.month == self.thismonth:
+                date = dd["date"]
 
-        print(date)
-        t = self.table[date - 1]
-        status = "通常開館"
-        if t == "BBFFFF":
-            status = "休日開館"
-        elif t == "FFFFBB":
-            status = "短縮開館"
-        elif t == "FFCCCC":
-            status = "休館"
+        status = ""
+        try:
+            t = self.table[date - 1]
+            if t == "FFFFFF":
+                status = "通常開館"
+            elif t == "BBFFFF":
+                status = "休日開館"
+            elif t == "FFFFBB":
+                status = "短縮開館"
+            elif t == "FFCCCC":
+                status = "休館"
+        except:
+            status = "取得できませんでした"
         return status
 
 
 if __name__ == "__main__":
+    """FORMAT:
+    ilo = IsLibOpen({year}, {month}) # if empty: this month
+    status = ilo.isopen({date}) # if empty: today(need instance for this month)
+    """
+
+    # today
     ilo = IsLibOpen()
     print("today: {}".format(ilo.isopen()))
 
